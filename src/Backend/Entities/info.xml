@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module>
+	<name>Entities</name>
+	<version>0.1.0</version>
+	<requirements>
+		<minimum_version>3.9.0</minimum_version>
+	</requirements>
+	<description>
+		<![CDATA[
+			Entities is module for creating and managing entities.
+			This module will be useful only until some ORM will be implemented.
+		]]>
+	</description>
+	<authors>
+		<author>
+			<name><![CDATA[Vytenis Ščiukas]]></name>
+			<url><![CDATA[http://www.vytsci.lt]]></url>
+		</author>
+	</authors>
+</module>
