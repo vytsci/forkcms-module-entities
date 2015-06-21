@@ -1,15 +1,10 @@
 <?php
 
-namespace Backend\Modules\Entities\Engine;
-
-use Common\Uri as CommonUri;
-
-use Backend\Core\Engine\Language as BL;
-use Backend\Core\Engine\Model as BackendModel;
+namespace Common\Modules\Entities;
 
 /**
  * Class Helper
- * @package Backend\Modules\Entities\Engine
+ * @package Common\Modules\Entities
  */
 class Helper
 {
