@@ -124,7 +124,7 @@ class Address extends Entity
 }
 ```
 
-#### Usage examples
+#### Examples
 I will add some examples, how to use this thing.
 
 ##### Setting object and storing data
