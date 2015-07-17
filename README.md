@@ -161,7 +161,7 @@ $address->load(array($this->getParameter('address_id', 'int')));
 ```
 
 ## Issues
-If you are having any issues, please create issue at [Github](https://github.com/vytenizs/forkcms-module-localization/issues).
+If you are having any issues, please create issue at [Github](https://github.com/vytenizs/forkcms-module-entities/issues).
 Or contact me directly. Thank you.
 
 ## Contacts
