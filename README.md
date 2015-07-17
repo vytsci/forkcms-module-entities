@@ -1,4 +1,4 @@
-# Fork CMS Localization
+# Fork CMS Entities
 ## Introduction
 Module was created to make DB records into entities. If you want to create a simple module with simple data you can
 avoid using this thing, but if your module has larger data this thing will be a life savior. This is practically created
@@ -6,7 +6,6 @@ to make things easier while Fork CMS team integrates Doctrine 2 into their CMS.
 
 ## Requirements
 * Core: Fork CMS 3.9.4
-* Module: [Entities](https://github.com/vytenizs/forkcms-module-entities)
 
 ## Usage
 ### Database
@@ -22,7 +21,7 @@ use Common\Modules\Localization\Entity;
 ```
 
 #### Object
-We must create our record object, here is an example:
+We must create our record object, here is an example:a
 
 ```
 <?php
