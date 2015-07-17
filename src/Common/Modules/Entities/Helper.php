@@ -27,6 +27,26 @@ class Helper
     }
 
     /**
+     * @param $entities
+     * @return array
+     */
+    public static function convertToArray($entities)
+    {
+        $result = array();
+
+        foreach ($entities as $entitiesKey => $entity) {
+            if (is_array($entity)) {
+                self::convertToArray($entity);
+            }
+            if ($entity instanceof Entity) {
+                $result[$entitiesKey] = $entity->toArray();
+            }
+        };
+
+        return $result;
+    }
+
+    /**
      * @param $var
      * @return string
      */

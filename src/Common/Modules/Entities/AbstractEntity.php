@@ -36,6 +36,11 @@ abstract class AbstractEntity
     protected $_columns = array();
 
     /**
+     * @var array
+     */
+    protected $_relations = array();
+
+    /**
      * @var bool
      */
     private $_loaded = false;
@@ -96,22 +101,29 @@ abstract class AbstractEntity
     }
 
     /**
+     * @param bool $includeRelations
      * @return array
      */
-    private function getVariables()
+    private function getVariables($includeRelations = true)
     {
-        $variables = array_filter(
-            get_object_vars($this),
-            '\\Common\\Modules\\Entities\\Helper::filterNotNull'
-        );
+        $result = array();
+        $objectVariables = get_object_vars($this);
 
-        foreach (array_keys($variables) as $variablesKey) {
-            if (!in_array($variablesKey, $this->_columns) && !in_array($variablesKey, $this->_primary)) {
-                unset($variables[$variablesKey]);
+        $entityVariables = array_merge($this->_primary, $this->_columns);
+
+        if ($includeRelations) {
+            $entityVariables = array_merge($entityVariables, $this->_relations);
+        }
+
+        $entityVariables = array_unique($entityVariables);
+
+        foreach ($objectVariables as $objectVariablesKey => $objectVariablesValue) {
+            if (in_array(Helper::toSnakeCase($objectVariablesKey), $entityVariables)) {
+                $result[$objectVariablesKey] = $objectVariablesValue;
             }
         }
 
-        return $variables;
+        return $result;
     }
 
     /**
@@ -119,7 +131,10 @@ abstract class AbstractEntity
      */
     public function isAffected()
     {
-        $variables = array_filter($this->getVariables());
+        $variables = array_filter(
+            $this->getVariables(),
+            '\\Common\\Modules\\Entities\\Helper::filterNotNull'
+        );
 
         return !empty($variables);
     }
@@ -152,6 +167,25 @@ abstract class AbstractEntity
     }
 
     /**
+     * @return string
+     */
+    public function getQuery()
+    {
+        return $this->_query;
+    }
+
+    /**
+     * @param $query
+     * @return $this
+     */
+    public function setQuery($query)
+    {
+        $this->_query = $query;
+
+        return $this;
+    }
+
+    /**
      * @return int
      */
     public function getId()
@@ -165,19 +199,20 @@ abstract class AbstractEntity
      */
     public function setId($id)
     {
-        $this->id = $id;
+        $this->id = (int)$id;
 
         return $this;
     }
 
     /**
+     * @param bool $onlyColumns
      * @return array
      */
-    public function toArray()
+    public function toArray($onlyColumns = false)
     {
         $result = array();
 
-        foreach ($this->getVariables() as $variablesKey => &$variablesValue) {
+        foreach ($this->getVariables(!$onlyColumns) as $variablesKey => &$variablesValue) {
             $variablesKey = Helper::toSnakeCase($variablesKey);
             if (is_array($variablesValue)) {
                 foreach ($variablesValue as $variablesValueKey => &$variablesValueValue) {
@@ -205,7 +240,7 @@ abstract class AbstractEntity
             return $this->id;
         }
 
-        $this->id = (int)$this->update();
+        $this->update();
 
         return $this->id;
     }
@@ -216,7 +251,7 @@ abstract class AbstractEntity
      */
     public function insert()
     {
-        $arrayToSave = array_filter($this->toArray(), '\\Common\\Modules\\Entities\\Helper::filterValuable');
+        $arrayToSave = array_filter($this->toArray(true), '\\Common\\Modules\\Entities\\Helper::filterValuable');
 
         return (int)$this->_db->insert($this->_table, $arrayToSave);
     }
@@ -228,7 +263,7 @@ abstract class AbstractEntity
      */
     public function update()
     {
-        $arrayToSave = array_filter($this->toArray(), '\\Common\\Modules\\Entities\\Helper::filterValuable');
+        $arrayToSave = array_filter($this->toArray(true), '\\Common\\Modules\\Entities\\Helper::filterValuable');
 
         $whereValues = array();
         $where = array();
