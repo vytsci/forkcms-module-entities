@@ -186,6 +186,53 @@ abstract class AbstractEntity
     }
 
     /**
+     * @param $column
+     * @return bool
+     */
+    public function hasColumn($column)
+    {
+        return in_array($column, $this->_columns);
+    }
+
+    /**
+     * @return array
+     */
+    public function getColumns()
+    {
+        return $this->_columns;
+    }
+
+    /**
+     * @param $relation
+     * @return bool
+     */
+    public function hasRelation($relation)
+    {
+        return in_array($relation, $this->_relations);
+    }
+
+    /**
+     * @return array
+     */
+    public function getRelations()
+    {
+        return $this->_relations;
+    }
+
+    /**
+     * @param $relation
+     * @return $this
+     */
+    public function addRelation($relation)
+    {
+        if (!in_array($relation, $this->_relations)) {
+            $this->_relations[] = $relation;
+        }
+
+        return $this;
+    }
+
+    /**
      * @return int
      */
     public function getId()
