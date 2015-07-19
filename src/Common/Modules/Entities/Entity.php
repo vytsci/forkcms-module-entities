@@ -18,7 +18,7 @@ class Entity extends AbstractEntity
     /**
      * @var string
      */
-    private $language;
+    protected $language;
 
     /**
      * @var array
@@ -28,7 +28,7 @@ class Entity extends AbstractEntity
     /**
      * @var
      */
-    private $metaId;
+    protected $metaId;
 
     /**
      * @param array $parameters
