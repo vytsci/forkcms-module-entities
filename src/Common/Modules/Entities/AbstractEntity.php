@@ -43,7 +43,7 @@ abstract class AbstractEntity
     /**
      * @var bool
      */
-    private $_loaded = false;
+    protected $_loaded = false;
 
     /**
      * @var int
@@ -282,7 +282,11 @@ abstract class AbstractEntity
     public function save()
     {
         if (empty($this->id) || !$this->_loaded) {
-            $this->id = $this->insert();
+            $id = $this->insert();
+
+            if ($this->id === null) {
+                $this->setId($id);
+            }
 
             return $this->id;
         }
