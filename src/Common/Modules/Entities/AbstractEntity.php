@@ -104,7 +104,7 @@ abstract class AbstractEntity
      * @param bool $includeRelations
      * @return array
      */
-    private function getVariables($includeRelations = true)
+    protected function getVariables($includeRelations = true)
     {
         $result = array();
         $objectVariables = get_object_vars($this);
