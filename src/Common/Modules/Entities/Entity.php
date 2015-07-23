@@ -60,6 +60,8 @@ class Entity extends AbstractEntity
                 $this->setMeta($meta);
             }
         }
+
+        return $this;
     }
 
     /**
