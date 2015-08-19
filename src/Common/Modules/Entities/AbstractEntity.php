@@ -92,7 +92,7 @@ abstract class AbstractEntity
 
         foreach ($record as $recordKey => $recordValue) {
             $setMethod = 'set' . \SpoonFilter::toCamelCase($recordKey);
-            if (method_exists($this, $setMethod)) {
+            if (method_exists($this, $setMethod) && $recordValue !== null) {
                 $this->$setMethod($recordValue);
             }
         }
@@ -259,7 +259,7 @@ abstract class AbstractEntity
     {
         $result = array();
 
-        foreach ($this->getVariables(!$onlyColumns) as $variablesKey => &$variablesValue) {
+        foreach ($this->getVariables(!$onlyColumns) as $variablesKey => $variablesValue) {
             $variablesKey = Helper::toSnakeCase($variablesKey);
             if (is_array($variablesValue)) {
                 foreach ($variablesValue as $variablesValueKey => &$variablesValueValue) {
@@ -288,12 +288,12 @@ abstract class AbstractEntity
                 $this->setId($id);
             }
 
-            return $this->id;
+            return $this;
         }
 
         $this->update();
 
-        return $this->id;
+        return $this;
     }
 
     /**
@@ -316,20 +316,29 @@ abstract class AbstractEntity
     {
         $arrayToSave = array_filter($this->toArray(true), '\\Common\\Modules\\Entities\\Helper::filterValuable');
 
-        $whereValues = array();
         $where = array();
+        $whereValues = array();
 
-        foreach ($this->_primary as $primaryValue) {
-            if (!isset($arrayToSave[$primaryValue])) {
-                throw new \Exception("Field {$primaryValue} does not exist within {$this->_table}");
-            }
-
-            $where[] = "{$primaryValue} = ?";
-            $whereValues[] = $arrayToSave[$primaryValue];
-
-            unset($arrayToSave[$primaryValue]);
-        }
+        Helper::generateWhereClauseVariables($this->_primary, $this->_table, $arrayToSave, $where, $whereValues);
 
         return (int)$this->_db->update($this->_table, $arrayToSave, implode(' AND ', $where), $whereValues);
+    }
+
+    /**
+     * @throws \Exception
+     * @throws \SpoonDatabaseException
+     */
+    public function delete()
+    {
+        $arrayToSave = array_filter($this->toArray(true), '\\Common\\Modules\\Entities\\Helper::filterValuable');
+
+        $where = array();
+        $whereValues = array();
+
+        Helper::generateWhereClauseVariables($this->_primary, $this->_table, $arrayToSave, $where, $whereValues);
+
+        $this->_db->delete($this->_table, implode(' AND ', $where), $whereValues);
+
+        $this->_loaded = false;
     }
 }

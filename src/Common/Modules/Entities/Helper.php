@@ -58,4 +58,26 @@ class Helper
         );
         return strtolower($var);
     }
+
+    /**
+     * @param $primary
+     * @param $table
+     * @param $arrayToSave
+     * @param $where
+     * @param $whereValues
+     * @throws \Exception
+     */
+    public static function generateWhereClauseVariables($primary, $table, &$arrayToSave, &$where, &$whereValues)
+    {
+        foreach ($primary as $primaryValue) {
+            if (!isset($arrayToSave[$primaryValue])) {
+                throw new \Exception("Field {$primaryValue} does not exist within {$table}");
+            }
+
+            $where[] = "{$primaryValue} = ?";
+            $whereValues[] = $arrayToSave[$primaryValue];
+
+            unset($arrayToSave[$primaryValue]);
+        }
+    }
 }
