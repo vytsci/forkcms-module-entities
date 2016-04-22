@@ -1,13 +1,21 @@
 <?php
 
-namespace Common\Modules\Entities;
+namespace Common\Modules\Entities\Engine;
+
+use Common\Core\Model as CommonModel;
 
 /**
  * Class Helper
- * @package Common\Modules\Entities
+ * @package Common\Modules\Entities\Engine
  */
 class Helper
 {
+
+    /**
+     * @var
+     */
+    private static $formatDateTime;
+
     /**
      * @param $var
      * @return bool
@@ -50,12 +58,14 @@ class Helper
      * @param $var
      * @return string
      */
-    public static function toSnakeCase($var) {
+    public static function toSnakeCase($var)
+    {
         $var = preg_replace(
             '/(?!^)[[:upper:]][[:lower:]]/',
             '$0',
-            preg_replace('/(?!^)[[:upper:]]+/', '_' . '$0', $var)
+            preg_replace('/(?!^)[[:upper:]]+/', '_'.'$0', $var)
         );
+
         return strtolower($var);
     }
 
@@ -79,5 +89,53 @@ class Helper
 
             unset($arrayToSave[$primaryValue]);
         }
+    }
+
+    /**
+     * @param $value
+     * @return bool|string
+     */
+    public static function prepareDateTime($value)
+    {
+        if ($value === null) {
+            $value = time();
+        }
+
+        return date('Y-m-d H:i:s', is_numeric($value) ? $value : strtotime(str_replace(array('/'), '-', $value)));
+    }
+
+    /**
+     * @param $dateTime
+     * @param null $format
+     * @return bool|int|string
+     */
+    public static function getDateTime($dateTime, $format = null)
+    {
+        if (is_null($dateTime)) {
+            return null;
+        }
+
+        $time = strtotime(str_replace('/', '-', $dateTime));
+
+        if (isset($format)) {
+            $time = date($format, $time);
+        }
+
+        return $time;
+    }
+
+    /***
+     * @return string
+     */
+    public static function getFormatDateTime()
+    {
+        if (is_null(self::$formatDateTime)) {
+            $dateFormat = CommonModel::getContainer()->get('fork.settings')->get('Core', 'date_format_short');
+            $timeFormat = CommonModel::getContainer()->get('fork.settings')->get('Core', 'time_format');
+
+            self::$formatDateTime = $dateFormat.' '.$timeFormat;
+        }
+
+        return self::$formatDateTime;
     }
 }

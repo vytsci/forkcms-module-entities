@@ -1,15 +1,16 @@
 <?php
 
-namespace Common\Modules\Entities;
+namespace Common\Modules\Entities\Engine;
 
 use Common\Core\Model as CommonModel;
 
 /**
  * Class Entity
- * @package Common\Modules\Entities
+ * @package Common\Modules\Entities\Engine
  */
 class Entity extends AbstractEntity
 {
+
     /**
      * @var array
      */
@@ -41,6 +42,21 @@ class Entity extends AbstractEntity
             $this->load($parameters);
             $this->loadMeta();
         }
+    }
+
+    /**
+     * @param $record
+     * @return $this
+     */
+    public function assemble($record)
+    {
+        parent::assemble($record);
+
+        if ($this->isLoaded()) {
+            $this->loadMeta();
+        }
+
+        return $this;
     }
 
     /**
@@ -78,7 +94,9 @@ class Entity extends AbstractEntity
      */
     public function setMetaId($metaId)
     {
-        $this->metaId = $metaId;
+        if ((int)$metaId > 0) {
+            $this->metaId = $metaId;
+        }
 
         return $this;
     }
@@ -141,6 +159,14 @@ class Entity extends AbstractEntity
     public function hasLanguage()
     {
         return $this->hasColumn('language');
+    }
+
+    /**
+     * @return bool
+     */
+    public function issetLanguage()
+    {
+        return isset($this->language);
     }
 
     /**

@@ -1,15 +1,17 @@
 <?php
 
-namespace Common\Modules\Entities;
+namespace Common\Modules\Entities\Engine;
 
 use Common\Core\Model as CommonModel;
 
 /**
  * Class AbstractEntity
- * @package Common\Modules\Entities
+ * @todo use ReflectionClass where needed
+ * @package Common\Modules\Entities\Engine
  */
-abstract class AbstractEntity
+abstract class AbstractEntity implements ArrayableInterface
 {
+
     /**
      * @var \SpoonDatabase
      */
@@ -46,6 +48,11 @@ abstract class AbstractEntity
     protected $_loaded = false;
 
     /**
+     * @var bool
+     */
+    protected $_saving = false;
+
+    /**
      * @var int
      */
     protected $id;
@@ -79,11 +86,24 @@ abstract class AbstractEntity
     }
 
     /**
+     *
+     */
+    public function unload()
+    {
+        $this->id = null;
+        $this->_loaded = false;
+    }
+
+    /**
      * @param $record
      * @return $this
      */
     public function assemble($record)
     {
+        if (empty($record)) {
+            return $this;
+        }
+
         $this->_loaded = true;
 
         if (empty($this->_columns)) {
@@ -91,7 +111,7 @@ abstract class AbstractEntity
         }
 
         foreach ($record as $recordKey => $recordValue) {
-            $setMethod = 'set' . \SpoonFilter::toCamelCase($recordKey);
+            $setMethod = 'set'.\SpoonFilter::toCamelCase($recordKey);
             if (method_exists($this, $setMethod) && $recordValue !== null) {
                 $this->$setMethod($recordValue);
             }
@@ -107,7 +127,6 @@ abstract class AbstractEntity
     protected function getVariables($includeRelations = true)
     {
         $result = array();
-        $objectVariables = get_object_vars($this);
 
         $entityVariables = array_merge($this->_primary, $this->_columns);
 
@@ -117,10 +136,21 @@ abstract class AbstractEntity
 
         $entityVariables = array_unique($entityVariables);
 
-        foreach ($objectVariables as $objectVariablesKey => $objectVariablesValue) {
-            if (in_array(Helper::toSnakeCase($objectVariablesKey), $entityVariables)) {
-                $result[$objectVariablesKey] = $objectVariablesValue;
+        foreach ($entityVariables as $entityVariable) {
+            $methodGet = 'get'.\SpoonFilter::toCamelCase($entityVariable);
+            $methodIs = 'is'.\SpoonFilter::toCamelCase($entityVariable);
+            $methodHas = 'has'.\SpoonFilter::toCamelCase($entityVariable);
+            $value = null;
+
+            if (is_callable(array($this, $methodGet))) {
+                $value = call_user_func(array($this, $methodGet));
+            } elseif (is_callable(array($this, $methodIs))) {
+                $value = call_user_func(array($this, $methodIs));
+            } elseif (is_callable(array($this, $methodHas))) {
+                $value = call_user_func(array($this, $methodHas));
             }
+
+            $result[$entityVariable] = $value;
         }
 
         return $result;
@@ -133,7 +163,7 @@ abstract class AbstractEntity
     {
         $variables = array_filter(
             $this->getVariables(),
-            '\\Common\\Modules\\Entities\\Helper::filterNotNull'
+            '\\Common\\Modules\\Entities\\Engine\\Helper::filterNotNull'
         );
 
         return !empty($variables);
@@ -261,37 +291,61 @@ abstract class AbstractEntity
 
         foreach ($this->getVariables(!$onlyColumns) as $variablesKey => $variablesValue) {
             $variablesKey = Helper::toSnakeCase($variablesKey);
+            $value = $variablesValue;
+
             if (is_array($variablesValue)) {
                 foreach ($variablesValue as $variablesValueKey => &$variablesValueValue) {
                     $variablesValueKey = Helper::toSnakeCase($variablesValueKey);
-                    if ($variablesValueValue instanceof AbstractEntity) {
-                        $result[$variablesKey][$variablesValueKey] = $variablesValueValue->toArray();
+                    if (is_callable(array($variablesValueValue, 'toArray'))) {
+                        $array = call_user_func(array($variablesValueValue, 'toArray'));
+                        $value[$variablesValueKey] = $this->_saving ? serialize($array) : $array;
+                    } elseif (!is_object($variablesValueValue)) {
+                        $value[$variablesValueKey] = $variablesValueValue;
                     }
                 }
-                continue;
+            } elseif ($variablesValue instanceof ArrayableInterface) {
+                if ($this->_saving) {
+                    if ($variablesValue instanceof EnumValue) {
+                        $value = call_user_func(array($variablesValue, 'getValue'));
+                    }
+                } else {
+                    $value = call_user_func(array($variablesValue, 'toArray'));
+                }
             }
-            $result[$variablesKey] = $variablesValue;
+
+            $result[$variablesKey] = $value;
         }
 
         return $result;
     }
 
     /**
-     * @return int
+     * @return $this
      */
     public function save()
     {
+        $this->_saving = true;
+
+        if (is_callable(array($this, 'beforeSave'))) {
+            call_user_func(array($this, 'beforeSave'));
+        }
+
         if (empty($this->id) || !$this->_loaded) {
             $id = $this->insert();
 
             if ($this->id === null) {
                 $this->setId($id);
             }
-
-            return $this;
+        } else {
+            $this->update();
         }
 
-        $this->update();
+        if (is_callable(array($this, 'afterSave'))) {
+            call_user_func(array($this, 'afterSave'));
+        }
+
+        $this->_loaded = true;
+        $this->_saving = false;
 
         return $this;
     }
@@ -302,9 +356,22 @@ abstract class AbstractEntity
      */
     public function insert()
     {
-        $arrayToSave = array_filter($this->toArray(true), '\\Common\\Modules\\Entities\\Helper::filterValuable');
+        $arrayToSave = array_filter(
+            $this->toArray(true),
+            '\\Common\\Modules\\Entities\\Engine\\Helper::filterValuable'
+        );
 
-        return (int)$this->_db->insert($this->_table, $arrayToSave);
+        if (is_callable(array($this, 'beforeInsert'))) {
+            call_user_func(array($this, 'beforeInsert'));
+        }
+
+        $id = (int)$this->_db->insert($this->_table, $arrayToSave);
+
+        if (is_callable(array($this, 'afterInsert'))) {
+            call_user_func(array($this, 'afterInsert'));
+        }
+
+        return $id;
     }
 
     /**
@@ -314,14 +381,24 @@ abstract class AbstractEntity
      */
     public function update()
     {
-        $arrayToSave = array_filter($this->toArray(true), '\\Common\\Modules\\Entities\\Helper::filterValuable');
+        $arrayToSave = $this->toArray(true);
 
         $where = array();
         $whereValues = array();
 
         Helper::generateWhereClauseVariables($this->_primary, $this->_table, $arrayToSave, $where, $whereValues);
 
-        return (int)$this->_db->update($this->_table, $arrayToSave, implode(' AND ', $where), $whereValues);
+        if (is_callable(array($this, 'beforeUpdate'))) {
+            call_user_func(array($this, 'beforeUpdate'));
+        }
+
+        $result = (int)$this->_db->update($this->_table, $arrayToSave, implode(' AND ', $where), $whereValues);
+
+        if (is_callable(array($this, 'afterUpdate'))) {
+            call_user_func(array($this, 'afterUpdate'));
+        }
+
+        return $result;
     }
 
     /**
@@ -330,14 +407,22 @@ abstract class AbstractEntity
      */
     public function delete()
     {
-        $arrayToSave = array_filter($this->toArray(true), '\\Common\\Modules\\Entities\\Helper::filterValuable');
+        $arrayToSave = array_filter($this->toArray(true), '\\Common\\Modules\\Entities\\Engine\\Helper::filterValuable');
 
         $where = array();
         $whereValues = array();
 
         Helper::generateWhereClauseVariables($this->_primary, $this->_table, $arrayToSave, $where, $whereValues);
 
+        if (is_callable(array($this, 'beforeDelete'))) {
+            call_user_func(array($this, 'beforeDelete'));
+        }
+
         $this->_db->delete($this->_table, implode(' AND ', $where), $whereValues);
+
+        if (is_callable(array($this, 'afterDelete'))) {
+            call_user_func(array($this, 'afterDelete'));
+        }
 
         $this->_loaded = false;
     }
